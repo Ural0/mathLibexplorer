@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MathLib Komplett-Rechner</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --code-bg: #1e1e1e;
+            --bg-body: #f8f9fa;
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: var(--bg-body); padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        h1 { text-align: center; color: var(--secondary); margin-bottom: 30px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: white; border-radius: 10px; padding: 15px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .card h3 { margin-top: 0; font-size: 1.1rem; color: var(--primary); border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        
+        .input-group { margin: 10px 0; }
+        input { width: calc(50% - 10px); padding: 6px; margin-bottom: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+        .full { width: calc(100% - 15px); }
+        
+        .btn-box { display: flex; flex-direction: column; gap: 5px; }
+        button { padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85rem; }
+        .calc-btn { background: var(--primary); color: white; }
+        .code-btn { background: #eee; color: #555; }
+        
+        .result { margin-top: 10px; font-weight: bold; color: #27ae60; font-size: 0.9rem; }
+        
+        /* Kleine Code-Box */
+        .code-box { 
+            display: none; 
+            margin-top: 8px; 
+            background: var(--code-bg); 
+            color: #dcdcdc; 
+            padding: 8px; 
+            border-radius: 5px; 
+            font-family: 'Consolas', monospace; 
+            font-size: 0.75rem; 
+            white-space: pre-wrap; 
+            border-left: 3px solid var(--primary);
+        }
+        .kw { color: #569cd6; } /* keyword */
+        .fn { color: #dcdcaa; } /* function */
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>MathLib Explorer</h1>
+    <div class="grid" id="main-grid">
+        <!-- Die Karten werden per JavaScript generiert für maximale Ordnung -->
+    </div>
+</div>
+
+<script>
+    // Alle Funktionen und deren Java-Code
+    const functions = [
+        { title: "Addition", id: "toplam", inputs: ["a", "b"], java: `public static int toplam(int a, int b) {\n    return a + b;\n}` },
+        { title: "Subtraktion", id: "cikar", inputs: ["a", "b"], java: `public int cikar(int a, int b) {\n    return a - b;\n}` },
+        { title: "Multiplikation", id: "carp", inputs: ["a", "b"], java: `public static int carp(int a, int b) {\n    return a * b;\n}` },
+        { title: "Division", id: "bol", inputs: ["a", "b"], java: `public static int böl(int a, int b) {\n    return a / b;\n}` },
+        { title: "Teiler finden", id: "asalPrime", inputs: ["a"], java: `public static int[] asalPrime(int a) {\n    int[] array = new int[a];\n    for (int i=1; i<a; i++) {\n        if (a%i==0) array[i]=i;\n    }\n    return array;\n}` },
+        { title: "Potenzieren", id: "us", inputs: ["Basis", "Exponent"], java: `public static int Üs(int a, int b) {\n    int ergebnis = 1;\n    for(int i=0; i<b; i++) ergebnis *= a;\n    return ergebnis;\n}` },
+        { title: "Maximum", id: "max", inputs: ["a", "b"], java: `public static int max(int a, int b) {\n    return (a > b) ? a : b;\n}` },
+        { title: "Minimum", id: "min", inputs: ["a", "b"], java: `public static int min(int a, int b) {\n    return (a > b) ? b : a;\n}` },
+        { title: "Betrag (Abs)", id: "betrag", inputs: ["a"], java: `public static int betrag(int a) {\n    if (a < 0) return -a;\n    return a;\n}` },
+        { title: "Gerade?", id: "ciftMi", inputs: ["a"], java: `public static boolean ciftMi(int a) {\n    return a % 2 == 0;\n}` },
+        { title: "Ungerade?", id: "tekMi", inputs: ["a"], java: `public static boolean tekMi(int a) {\n    return a % 2 == 1;\n}` },
+        { title: "Stellenanzahl", id: "basamakSayisi", inputs: ["Zahl"], java: `public static int basamakSayisi(int a) {\n    int b=0; while(a>0){ a/=10; b++; } return b;\n}` },
+        { title: "Quersumme", id: "rakamlariTopla", inputs: ["Zahl"], java: `public static int rakamlariTopla(int a) {\n    int sum=0; while(a>0){ sum+=a%10; a/=10; } return sum;\n}` },
+        { title: "Größte Ziffer", id: "enBuyukBasamak", inputs: ["Zahl"], java: `public static int enBuyukBasamak(int a) {\n    int max=0; while(a>0){ if(a%10>max) max=a%10; a/=10; } return max;\n}` },
+        { title: "Prozent", id: "yuzde", inputs: ["Zahl", "%"], java: `public static double yuzde(int s, int y) {\n    return (s * y) / 100;\n}` },
+        { title: "Im Bereich?", id: "aralikta", inputs: ["Zahl", "Min", "Max"], java: `public static boolean aralikta(int a, int min, int max) {\n    return (min < a && a < max);\n}` }
+    ];
+
+    const grid = document.getElementById('main-grid');
+
+    // Karten automatisch erstellen
+    functions.forEach(f => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        
+        let inputsHTML = '';
+        f.inputs.forEach((placeholder, index) => {
+            const isFull = f.inputs.length === 1 || (f.inputs.length === 3 && index === 0);
+            inputsHTML += `<input type="number" id="input-${f.id}-${index}" class="${isFull ? 'full' : ''}" placeholder="${placeholder}">`;
+        });
+
+        card.innerHTML = `
+            <h3>${f.title}</h3>
+            <div class="input-group">${inputsHTML}</div>
+            <div class="btn-box">
+                <button class="calc-btn" onclick="calculate('${f.id}')">Berechnen</button>
+                <button class="code-btn" onclick="toggleCode('${f.id}')">Code zeigen</button>
+            </div>
+            <div class="result" id="res-${f.id}"></div>
+            <div class="code-box" id="code-${f.id}">${formatCode(f.java)}</div>
+        `;
+        grid.appendChild(card);
+    });
+
+    function formatCode(code) {
+        return code.replace(/public|static|int|double|boolean|return|if|else|while|for/g, match => `<span class="kw">${match}</span>`);
+    }
+
+    function toggleCode(id) {
+        const box = document.getElementById(`code-${id}`);
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+
+    function calculate(id) {
+        const resDiv = document.getElementById(`res-${id}`);
+        const v1 = Number(document.getElementById(`input-${id}-0`)?.value);
+        const v2 = Number(document.getElementById(`input-${id}-1`)?.value);
+        const v3 = Number(document.getElementById(`input-${id}-2`)?.value);
+        
+        let result = "";
+
+        switch(id) {
+            case 'toplam': result = v1 + v2; break;
+            case 'cikar': result = v1 - v2; break;
+            case 'carp': result = v1 * v2; break;
+            case 'bol': result = v2 !== 0 ? Math.floor(v1 / v2) : "Fehler"; break;
+            case 'asalPrime': 
+                let teiler = []; 
+                for(let i=1; i<=v1; i++) if(v1%i===0) teiler.push(i);
+                result = "[" + teiler.join(", ") + "]";
+                break;
+            case 'us': result = Math.pow(v1, v2); break;
+            case 'max': result = Math.max(v1, v2); break;
+            case 'min': result = Math.min(v1, v2); break;
+            case 'betrag': result = Math.abs(v1); break;
+            case 'ciftMi': result = v1 % 2 === 0 ? "Wahr" : "Falsch"; break;
+            case 'tekMi': result = v1 % 2 !== 0 ? "Wahr" : "Falsch"; break;
+            case 'basamakSayisi': result = Math.abs(v1).toString().length; break;
+            case 'rakamlariTopla': 
+                result = Math.abs(v1).toString().split('').reduce((a,b) => a + parseInt(b), 0);
+                break;
+            case 'enBuyukBasamak':
+                result = Math.max(...Math.abs(v1).toString().split('').map(Number));
+                break;
+            case 'yuzde': result = (v1 * v2) / 100; break;
+            case 'aralikta': result = (v1 > v2 && v1 < v3) ? "Ja" : "Nein"; break;
+        }
+        resDiv.innerText = "Ergebnis: " + result;
+    }
+</script>
+
+</body>
+</html>
